@@ -87,12 +87,13 @@ class Rights(authenticated.Rights):
             conn.simple_bind_s(self._ldap_reader_dn, self._ldap_secret)
             """Search for the user in group"""
             res = conn.search_s(self._ldap_base, self.ldap.SCOPE_SUBTREE, filterstr=self._ldap_filter.format(user, group), attrlist=['sAMAccountName'])
-            if len(res) == 0:
-                logger.debug(f"_check_group_membership2 user '{user}' is not a member of {group}")
-                return False
-            else:
-                logger.debug(f"_check_group_membership2 user '{user}' is a memeber of {group}")
-                return True
+            logger.debug(f"{res}")
+            for dn, entry in res:
+                if isinstance(entry, dict):
+                    logger.debug(f"_check_group_membership2 user '{user}' is a member of {group}")
+                    return True
+            logger.debug(f"_check_group_membership2 user '{user}' is not a memeber of {group}")
+            return False
         except Exception as e:
             raise RuntimeError(f"Invalid ldap configuration:{e}")
 
@@ -129,12 +130,12 @@ class Rights(authenticated.Rights):
             search_scope=self.ldap3.SUBTREE,
             attributes=['sAMAccountName']
         )
-        if len(conn.entries) == 0:
-            logger.debug(f"_check_group_membership3 user '{user}' is not a member of {group}")
-            return False
-        else:
-            logger.debug(f"_check_group_membership3 user '{user}' is a memeber of {group}")
-            return True
+        for dn, entry in res:
+            if isinstance(entry, dict):
+                logger.debug(f"_check_group_membership3 user '{user}' is a member of {group}")
+                return True
+        logger.debug(f"_check_group_membership3 user '{user}' is not a memeber of {group}")
+        return False
 
     def check_group_membership(self, user: str, group: str) -> bool:
         """

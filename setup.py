@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name="radicale_rights_ldap",
-    version="0.1",
+    version="0.2",
     description="LDAP Rights Plugin for Radicale 3",
     author="Andrey Kunitsyn",
     license="GNU GPL v3",
