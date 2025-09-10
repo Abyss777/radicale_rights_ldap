@@ -1,5 +1,5 @@
 # This file is part of Radicale - CalDAV and CardDAV server
-# Copyright © 2024 Andrey Kunitsyn
+# Copyright © 2024-2025 Andrey Kunitsyn
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -145,23 +145,36 @@ class Rights(authenticated.Rights):
             return self._check_group_membership2(user, group)
         return self._check_group_membership3(user, group)
 
-
     def authorization(self, user: str, path: str) -> str:
+        logger.debug(
+            "User %r is trying to access path %r.",
+            user,
+            path
+        )
         if self._verify_user and not user:
+            logger.debug("Unknown user, access is not granted")
             return ""
         sane_path = pathutils.strip_path(path)
         if not sane_path:
+            logger.debug("Accessing root path. Access granted.")
             return "R"
         if sane_path == self._gal_path:
+            logger.debug("Read-only access to Global Address List")
             return "r"
         if sane_path == self._gcal_path:
             if self.check_group_membership(user, self._gcal_group_dn):
+                logger.debug("Read-Write access to Global Clients Address List")
                 return "rw"
+            logger.debug("Read-only access to Global Clients Address List")
             return "r"
         if self._verify_user and user != sane_path.split("/", maxsplit=1)[0]:
+            logger.debug("Access to not user collection is not granted")
             return ""
         if "/" not in sane_path:
+            logger.debug("Read-Write access to user collection granted")
             return "RW"
         if sane_path.count("/") == 1:
+            logger.debug("Read-Write access to children user collection granted")
             return "rw"
         return ""
+
