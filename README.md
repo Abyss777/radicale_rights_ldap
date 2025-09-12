@@ -14,10 +14,20 @@ ldap_use_ssl = True
 filesystem_folder = /var/lib/radicale
 [rights]
 type = radicale_rights_ldap
-# Path to Global Address List
-gal_path = shared/gal
-# Path to Global Clients Address List
-gcal_path = shared/clients
+# Shared collection root path
+shared_collection = shared
+# Pattern for shared calendar group with readers
+shared_calendar_group_r = CN=Mail_Calendar_{0}_R,OU=Shared,OU=Radicale,OU=Security,DC=domain,DC=local
+# Pattern for shared calendar group with writers
+shared_calendar_group_rw = CN=Mail_Calendar_{0}_RW,OU=Shared,OU=Radicale,OU=Security,DC=domain,DC=local
+# Pattern for shared address book with readers
+shared_abook_group_r = CN=Mail_Abook_{0}_R,OU=Shared,OU=Radicale,OU=Security,DC=domain,DC=local
+# Pattern for shared address book with writers
+shared_abook_group_rw = CN=Mail_Abook_{0}_RW,OU=Shared,OU=Radicale,OU=Security,DC=domain,DC=local
+# Subpath to Global Address List
+gal_path = gal
+# Subpath to Global Clients Address List
+gcal_path = clients
 # Group of Global Clients Address List editors
 gcal_group_dn = CN=Mail_GCAL_Editors,OU=Radicale,OU=Security,DC=domain,DC=local
 # ldap filter to check group membership (with nested)
