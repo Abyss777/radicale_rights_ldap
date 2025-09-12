@@ -1,5 +1,5 @@
 # This file is part of Radicale - CalDAV and CardDAV server
-# Copyright © 2024-2025 Andrey Kunitsyn
+# Copyright © 2024 Andrey Kunitsyn
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -71,6 +71,11 @@ class Rights(authenticated.Rights):
                     self._ldap_ssl_verify_mode = ssl.CERT_NONE
                 elif tmp == "OPTIONAL":
                     self._ldap_ssl_verify_mode = ssl.CERT_OPTIONAL
+        self._shared_collection = configuration.get("rights", "shared_collection")
+        self._shared_calendar_group_r = configuration.get("rights", "shared_calendar_group_r")
+        self._shared_calendar_group_rw = configuration.get("rights", "shared_calendar_group_rw")
+        self._shared_abook_group_r = configuration.get("rights", "shared_abook_group_r")
+        self._shared_abook_group_rw = configuration.get("rights", "shared_abook_group_rw")
         self._gal_path = configuration.get("rights", "gal_path")
         self._gcal_path = configuration.get("rights", "gcal_path")
         self._gcal_group_dn = configuration.get("rights", "gcal_group_dn")
@@ -145,6 +150,20 @@ class Rights(authenticated.Rights):
             return self._check_group_membership2(user, group)
         return self._check_group_membership3(user, group)
 
+    def check_shared_membership(self, user: str, collection: str) -> str:
+        """
+        Check if user has access to shared collection
+        """
+        if self.check_group_membership(user, self._shared_calendar_group_rw.format(collection)):
+            return "rw"
+        if self.check_group_membership(user, self._shared_abook_group_rw.format(collection)):
+            return "rw"
+        if self.check_group_membership(user, self._shared_calendar_group_r.format(collection)):
+            return "r"
+        if self.check_group_membership(user, self._shared_abook_group_r.format(collection)):
+            return "r"
+        return ""
+
     def authorization(self, user: str, path: str) -> str:
         logger.debug(
             "User %r is trying to access path %r.",
@@ -158,23 +177,28 @@ class Rights(authenticated.Rights):
         if not sane_path:
             logger.debug("Accessing root path. Access granted.")
             return "R"
-        if sane_path == self._gal_path:
-            logger.debug("Read-only access to Global Address List")
-            return "r"
-        if sane_path == self._gcal_path:
-            if self.check_group_membership(user, self._gcal_group_dn):
-                logger.debug("Read-Write access to Global Clients Address List")
+        parts = sane_path.split("/", maxsplit=1)
+        pathowner = parts[0]
+        if len(parts) == 1:
+            if self._verify_user and pathowner == user:
+                logger.debug("Read-Write access to user collection granted")
+                return "RW"
+            if pathowner == self._shared_collection:
+                logger.debug("Accessing shared root path. Read access granted.")
+                return "R"
+        elif len(parts) == 2:
+            subpath = parts[1]
+            if self._verify_user and pathowner == user:
+                logger.debug("Read-Write access to a children user collection granted")
                 return "rw"
-            logger.debug("Read-only access to Global Clients Address List")
-            return "r"
-        if self._verify_user and user != sane_path.split("/", maxsplit=1)[0]:
-            logger.debug("Access to not user collection is not granted")
-            return ""
-        if "/" not in sane_path:
-            logger.debug("Read-Write access to user collection granted")
-            return "RW"
-        if sane_path.count("/") == 1:
-            logger.debug("Read-Write access to children user collection granted")
-            return "rw"
+            if subpath == self._gal_path:
+                logger.debug("Read-only access to Global Address List")
+                return "r"
+            if subpath == self._gcal_path:
+                if self.check_group_membership(user, self._gcal_group_dn):
+                    logger.debug("Read-Write access to Global Clients Address List")
+                    return "rw"
+                logger.debug("Read-only access to Global Clients Address List")
+                return "r"
+            return self.check_shared_membership(user, subpath)
         return ""
-
